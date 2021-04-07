@@ -1,5 +1,5 @@
 import gettext
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import click
 
@@ -10,10 +10,19 @@ from pulpcore.cli.common.context import (
     pass_entity_context,
     pass_pulp_context,
 )
-from pulpcore.cli.common.generic import destroy_command, href_option, show_command
+from pulpcore.cli.common.generic import create_command, list_command, destroy_command, href_option, show_command
 from pulpcore.cli.core.context import PulpExportContext, PulpExporterContext
 
 _ = gettext.gettext
+
+
+def _exporter_callback(ctx: click.Context, param: click.Parameter, value: Optional[str]
+) -> Optional[str]:
+    if value is not None:
+        export_ctx: PulpExportContext = ctx.find_object(PulpExportContext)
+        exporter_ctx = PulpExporterContext(export_ctx.pulp_ctx)
+        export_ctx.exporter = exporter_ctx.find(name=value)
+    return value
 
 
 @click.group()
@@ -29,7 +38,16 @@ def pulp(ctx: click.Context, pulp_ctx: PulpContext) -> None:
 
 
 lookup_options = [href_option]
+exporter_option = click.option(
+    "--exporter",
+    type=str,
+    required=True,
+    help=_("Name of owning PulpExport"),
+    callback=_exporter_callback,
+    expose_value=False
+)
 
+pulp.add_command(list_command(decorators=[exporter_option]))
 pulp.add_command(show_command(decorators=lookup_options))
 pulp.add_command(destroy_command(decorators=lookup_options))
 
@@ -52,28 +70,6 @@ def delete(pulp_ctx: PulpContext, export_ctx: PulpExportContext, href: str) -> N
     result = export_ctx.delete(href)
     pulp_ctx.output_result(result)
 
-
-@pulp.command()
-@click.option("--exporter", type=str, required=True, help=_("Name of owning PulpExporter"))
-@click.option(
-    "--limit", default=DEFAULT_LIMIT, type=int, help=_("Limit the number of exporters to show.")
-)
-@click.option("--offset", default=0, type=int, help=_("Skip a number of exporters to show."))
-@pass_entity_context
-@pass_pulp_context
-def list(
-    pulp_ctx: PulpContext,
-    export_ctx: PulpExportContext,
-    exporter: str,
-    limit: int,
-    offset: int,
-    **kwargs: Any
-) -> None:
-    params = {k: v for k, v in kwargs.items() if v is not None}
-    exporter_ctx = PulpExporterContext(pulp_ctx)
-    export_ctx.exporter = exporter_ctx.find(name=exporter)
-    result = export_ctx.list(limit=limit, offset=offset, parameters=params)
-    pulp_ctx.output_result(result)
 
 
 @pulp.command()

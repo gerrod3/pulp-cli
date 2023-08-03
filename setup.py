@@ -37,7 +37,7 @@ setup(
     package_data={"": ["py.typed", "locale/*/LC_MESSAGES/*.mo"]},
     python_requires=">=3.6",
     install_requires=[
-        "pulp-glue==0.21.0.dev",
+        "pulp-glue==0.21.0",
         "click>=8.0.0,<8.1.7",
         "PyYAML>=5.3,<6.1",
         "schema>=0.7.5,<0.8",
